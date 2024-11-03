@@ -1,0 +1,244 @@
+name: Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      qt-version:
+        description: 'Qt version to download sources for, apply patches and build'
+        required: true
+      patch-version:
+        description: 'Version of the patch to apply. Defaults to the same version as "qt-version" if not provided'
+        required: false
+
+run-name: Qt ${{ inputs.qt-version }}
+
+jobs:
+  build-qt:
+    name: Build Qt
+    runs-on: [windows-2022]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Qt Source
+        uses: actions/checkout@v4
+        with:
+          repository: 'qt/qt5'
+          ref: v${{ inputs.qt-version }}
+          path: 'Sources'
+
+      - name: Initialize submodules
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference=$true
+
+          Set-Location .\Sources
+
+          $repo_init_arguments = @(
+              "--module-subset="
+              @(
+                  "default,"
+                  "-qt3d,"
+                  "-qt5compat,"
+                  "-qtcharts,"
+                  "-qtcoap,"
+                  "-qtconnectivity,"
+                  "-qtdatavis3d,"
+                  "-qtdoc,"
+                  "-qtgrpc,"
+                  "-qthttpserver,"
+                  "-qtlanguageserver,"
+                  "-qtlocation,"
+                  "-qtlottie,"
+                  "-qtmqtt,"
+                  "-qtnetworkauth,"
+                  "-qtopcua,"
+                  "-qtpositioning,"
+                  "-qtquick3d,"
+                  "-qtquick3dphysics,"
+                  "-qtquickeffectmaker,"
+                  "-qtquicktimeline,"
+                  "-qtremoteobjects,"
+                  "-qtscxml,"
+                  "-qtsensors,"
+                  "-qtspeech,"
+                  "-qtcoap,"
+                  "-qtconnectivity,"
+                  "-qtdatavis3d,"
+                  "-qtlottie,"
+                  "-qtmqtt,"
+                  "-qtnetworkauth,"
+                  "-qtopcua,"
+                  "-qtpositioning,"
+                  "-qtquick3d,"
+                  "-qtquicktimeline,"
+                  "-qtremoteobjects,"
+                  "-qtscxml,"
+                  "-qtsensors,"
+                  "-qtserialbus,"
+                  "-qtserialport,"
+                  "-qtvirtualkeyboard,"
+                  "-qtwayland,"
+                  "-qtwebchannel,"
+                  "-qtwebengine,"
+                  "-qtwebsockets,"
+                  "-qtwebview,"
+                  "-qtsvg,"
+                  "-qtimageformats,"
+                  "-qtmultimedia,"
+                  "-qttranslations"
+              ) -join ''
+          ) -join ''
+
+          perl init-repository $repo_init_arguments
+
+      - name: Apply patches
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference=$true
+
+          Set-Location .\Sources
+
+          git apply ..\Patches\qt-ui-automation-id-qtbase.patch
+          git apply ..\Patches\qt-ui-automation-id-qtdeclarative.patch
+
+      - name: Setup Visual Studio environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Configure Qt Build
+        shell: cmd
+        run: |
+          @echo off
+
+          set "PREFIX=%CD%\Build"
+          echo Install Prefix: %PREFIX%
+
+          set "ARGUMENTS=-release -shared -nomake examples -nomake tests -schannel -direct2d -skip qtcharts,qtcoap,qtconnectivity,qtdatavis3d,qtlottie,qtmqtt,qtnetworkauth,qtopcua,qtpositioning,qtquick3d,qtquicktimeline,qtremoteobjects,qtscxml,qtsensors,qtcoap,qtconnectivity,qtdatavis3d,qtlottie,qtmqtt,qtnetworkauth,qtopcua,qtpositioning,qtquick3d,qtquicktimeline,qtremoteobjects,qtscxml,qtsensors,qtserialbus,qtserialport,qtvirtualkeyboard,qtwayland,qtwebchannel,qtwebengine,qtwebsockets,qtwebview,qtsvg,qtimageformats,qtmultimedia,qttools,qttranslations -prefix %PREFIX%"
+
+          cd Sources
+          echo Running: call configure %ARGUMENTS%
+          call configure %ARGUMENTS%
+          exit /b %errorlevel%
+
+      - name: Build Qt
+        shell: cmd
+        run: |
+          cd Sources
+          ninja
+
+      - name: Install Qt Build
+        shell: cmd
+        run: |
+          cd Sources
+          ninja install
+
+      - name: Stage Qt Build
+        uses: actions/upload-artifact@v4    
+        with:
+          name: qt
+          path: ${{ github.workspace }}/Build/
+          retention-days: 2
+
+  build-test:
+    name: Build Test App
+    runs-on: [windows-2022]
+    needs: build-qt
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Qt Build
+        uses: actions/download-artifact@v4
+        with:
+          name: qt
+          path: ${{ github.workspace }}/Qt
+
+      - name: Setup Visual Studio environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Build Test app
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference=$true
+
+          Set-Location .\Test
+          mkdir Build
+          Set-Location .\Build
+          
+          cmake -G "Ninja" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_PREFIX_PATH="${{ github.workspace }}\Qt" -DCMAKE_INSTALL_PREFIX="./" ..
+          ninja
+
+      - name: Install Test app
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference=$true
+
+          Set-Location .\Test\Build
+          ninja install
+
+      - name: Add Test app runtime dependencies
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference=$true
+
+          Set-Location .\Test\Build\bin
+          
+          ${{ github.workspace }}\Qt\bin\windeployqt.exe --no-translations --no-compiler-runtime -release --qmldir ${{ github.workspace }}\Test .\testuiautomationid.exe
+
+      - name: Stage Test app
+        uses: actions/upload-artifact@v4
+        with:
+          name: testuiautomationid
+          path: ${{ github.workspace }}/Test/Build/bin/
+          retention-days: 30
+
+  test:
+    name: Run Test
+    runs-on: [windows-2022]
+    needs: [build-qt,build-test]
+    permissions:
+      contents: read
+      issues: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Appium
+        shell: pwsh
+        run: |
+          npm install -g appium
+          appium --version
+
+      - name: Install Appium Windows Driver
+        shell: pwsh
+        run: |
+          appium driver install windows
+
+      - name: Download Test app
+        uses: actions/download-artifact@v4
+        with:
+          name: testuiautomationid
+          path: ${{ github.workspace }}/TestApp
+      
+      - name: Run Tests
+        env:
+          UIATEST_PATH: ${{ github.workspace }}/TestApp/testuiautomationid.exe
+        shell: pwsh          
+        run: |
+          Set-Location .\UIATest
+          dotnet test -c Release -v n --logger "trx;LogFileName=TestsResults.trx"
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action/windows@v2
+        if: always()
+        with:
+          files: UIATest\TestResults\*.trx

@@ -1,0 +1,222 @@
+diff --git a/qtbase/src/gui/accessible/qaccessible.h b/qtbase/src/gui/accessible/qaccessible.h
+index 521cfb855b..0f5a8ad128 100644
+--- a/qtbase/src/gui/accessible/qaccessible.h
++++ b/qtbase/src/gui/accessible/qaccessible.h
+@@ -138,14 +138,15 @@ public:
+         NameChanged          = 0x800C,
+         DescriptionChanged   = 0x800D,
+         ValueChanged         = 0x800E,
+         ParentChanged        = 0x800F,
+         HelpChanged          = 0x80A0,
+         DefaultActionChanged = 0x80B0,
+         AcceleratorChanged   = 0x80C0,
++        AutomationIdChanged  = 0x80D0,
+ 
+         InvalidEvent
+     };
+     Q_ENUM(Event)
+ 
+     // 64 bit enums seem hard on some platforms (windows...)
+     // which makes using a bit field a sensible alternative
+@@ -360,14 +361,15 @@ public:
+     enum Text {
+         Name         = 0,
+         Description,
+         Value,
+         Help,
+         Accelerator,
+         DebugDescription,
++        AutomationId,
+         UserText     = 0x0000ffff
+     };
+ 
+     enum RelationFlag {
+         Label         = 0x00000001,
+         Labelled      = 0x00000002,
+         Controller    = 0x00000004,
+diff --git a/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiaaccessibility.cpp b/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiaaccessibility.cpp
+index 0903f5a618..fe99d01240 100644
+--- a/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiaaccessibility.cpp
++++ b/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiaaccessibility.cpp
+@@ -166,14 +166,17 @@ void QWindowsUiaAccessibility::notifyAccessibilityUpdate(QAccessibleEvent *event
+         break;
+     case QAccessible::ValueChanged:
+         QWindowsUiaMainProvider::notifyValueChange(static_cast<QAccessibleValueChangeEvent *>(event));
+         break;
+     case QAccessible::NameChanged:
+         QWindowsUiaMainProvider::notifyNameChange(event);
+         break;
++    case QAccessible::AutomationIdChanged:
++        QWindowsUiaMainProvider::notifyAutomationIdChange(event);
++        break;
+     case QAccessible::SelectionAdd:
+         QWindowsUiaMainProvider::notifySelectionChange(event);
+         break;
+     case QAccessible::TextAttributeChanged:
+     case QAccessible::TextColumnChanged:
+     case QAccessible::TextInserted:
+     case QAccessible::TextRemoved:
+diff --git a/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiamainprovider.cpp b/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiamainprovider.cpp
+index 171a3c268b..77e96b8d60 100644
+--- a/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiamainprovider.cpp
++++ b/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiamainprovider.cpp
+@@ -220,14 +220,27 @@ void QWindowsUiaMainProvider::notifyNameChange(QAccessibleEvent *event)
+             setVariantString(accessible->text(QAccessible::Name), &newVal);
+             QWindowsUiaWrapper::instance()->raiseAutomationPropertyChangedEvent(provider, UIA_NamePropertyId, oldVal, newVal);
+             ::SysFreeString(newVal.bstrVal);
+         }
+     }
+ }
+ 
++void QWindowsUiaMainProvider::notifyAutomationIdChange(QAccessibleEvent *event)
++{
++    if (QAccessibleInterface *accessible = event->accessibleInterface()) {
++        if (QWindowsUiaMainProvider *provider = providerForAccessible(accessible)) {
++            VARIANT oldVal, newVal;
++            clearVariant(&oldVal);
++            setVariantString(accessible->text(QAccessible::AutomationId), &newVal);
++            QWindowsUiaWrapper::instance()->raiseAutomationPropertyChangedEvent(provider, UIA_AutomationIdPropertyId, oldVal, newVal);
++            ::SysFreeString(newVal.bstrVal);
++        }
++    }
++}
++
+ void QWindowsUiaMainProvider::notifySelectionChange(QAccessibleEvent *event)
+ {
+     if (QAccessibleInterface *accessible = event->accessibleInterface()) {
+         if (QWindowsUiaMainProvider *provider = providerForAccessible(accessible)) {
+             QWindowsUiaWrapper::instance()->raiseAutomationEvent(provider, UIA_SelectionItem_ElementSelectedEventId);
+         }
+     }
+@@ -416,15 +429,15 @@ HRESULT QWindowsUiaMainProvider::GetPropertyValue(PROPERTYID idProp, VARIANT *pR
+         break;
+     case UIA_AccessKeyPropertyId:
+         // Accelerator key.
+         setVariantString(accessible->text(QAccessible::Accelerator), pRetVal);
+         break;
+     case UIA_AutomationIdPropertyId:
+         // Automation ID, which can be used by tools to select a specific control in the UI.
+-        setVariantString(automationIdForAccessible(accessible), pRetVal);
++        setVariantString(accessible->text(QAccessible::AutomationId), pRetVal);
+         break;
+     case UIA_ClassNamePropertyId:
+         // Class name.
+         if (QObject *o = accessible->object()) {
+             QString className = QLatin1String(o->metaObject()->className());
+             setVariantString(className, pRetVal);
+         }
+diff --git a/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiamainprovider.h b/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiamainprovider.h
+index f7320388f7..e3de692172 100644
+--- a/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiamainprovider.h
++++ b/qtbase/src/plugins/platforms/windows/uiautomation/qwindowsuiamainprovider.h
+@@ -65,14 +65,15 @@ public:
+     static QWindowsUiaMainProvider *providerForAccessible(QAccessibleInterface *accessible);
+     explicit QWindowsUiaMainProvider(QAccessibleInterface *a, int initialRefCount = 1);
+     virtual ~QWindowsUiaMainProvider();
+     static void notifyFocusChange(QAccessibleEvent *event);
+     static void notifyStateChange(QAccessibleStateChangeEvent *event);
+     static void notifyValueChange(QAccessibleValueChangeEvent *event);
+     static void notifyNameChange(QAccessibleEvent *event);
++    static void notifyAutomationIdChange(QAccessibleEvent *event);
+     static void notifySelectionChange(QAccessibleEvent *event);
+     static void notifyTextChange(QAccessibleEvent *event);
+ 
+     // IUnknown
+     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID id, LPVOID *iface) override;
+     ULONG STDMETHODCALLTYPE AddRef() override;
+     ULONG STDMETHODCALLTYPE Release() override;
+diff --git a/qtbase/src/widgets/accessible/qaccessiblewidget.cpp b/qtbase/src/widgets/accessible/qaccessiblewidget.cpp
+index ae545a5ce2..57d4962f46 100644
+--- a/qtbase/src/widgets/accessible/qaccessiblewidget.cpp
++++ b/qtbase/src/widgets/accessible/qaccessiblewidget.cpp
+@@ -438,14 +438,16 @@ QString QAccessibleWidget::text(QAccessible::Text t) const
+ #endif
+         break;
+     case QAccessible::Accelerator:
+         str = qt_accHotKey(buddyString(widget()));
+         break;
+     case QAccessible::Value:
+         break;
++    case QAccessible::AutomationId:
++        str = widget()->automationId();
+     default:
+         break;
+     }
+     return str;
+ }
+ 
+ /*! \reimp */
+diff --git a/qtbase/src/widgets/kernel/qwidget.cpp b/qtbase/src/widgets/kernel/qwidget.cpp
+index cfc3f6a7d5..93caf2d5f1 100644
+--- a/qtbase/src/widgets/kernel/qwidget.cpp
++++ b/qtbase/src/widgets/kernel/qwidget.cpp
+@@ -11449,14 +11449,28 @@ void QWidget::setAccessibleDescription(const QString &description)
+ }
+ 
+ QString QWidget::accessibleDescription() const
+ {
+     Q_D(const QWidget);
+     return d->accessibleDescription;
+ }
++
++void QWidget::setAutomationId(const QString &automationId)
++{
++    Q_D(QWidget);
++    d->automationId = automationId;
++    QAccessibleEvent event(this, QAccessible::AutomationIdChanged);
++    QAccessible::updateAccessibility(&event);
++}
++
++QString QWidget::automationId() const
++{
++    Q_D(const QWidget);
++    return d->automationId;
++}
+ #endif // QT_NO_ACCESSIBILITY
+ 
+ #ifndef QT_NO_SHORTCUT
+ /*!
+     Adds a shortcut to Qt's shortcut system that watches for the given
+     \a key sequence in the given \a context. If the \a context is
+     Qt::ApplicationShortcut, the shortcut applies to the application as a
+diff --git a/qtbase/src/widgets/kernel/qwidget.h b/qtbase/src/widgets/kernel/qwidget.h
+index c1c679c026..e7893ba3e7 100644
+--- a/qtbase/src/widgets/kernel/qwidget.h
++++ b/qtbase/src/widgets/kernel/qwidget.h
+@@ -410,14 +410,16 @@ public:
+     QString whatsThis() const;
+ #endif
+ #ifndef QT_NO_ACCESSIBILITY
+     QString accessibleName() const;
+     void setAccessibleName(const QString &name);
+     QString accessibleDescription() const;
+     void setAccessibleDescription(const QString &description);
++    QString automationId() const;
++    void setAutomationId(const QString &automationId);
+ #endif
+ 
+     void setLayoutDirection(Qt::LayoutDirection direction);
+     Qt::LayoutDirection layoutDirection() const;
+     void unsetLayoutDirection();
+ 
+     void setLocale(const QLocale &locale);
+diff --git a/qtbase/src/widgets/kernel/qwidget_p.h b/qtbase/src/widgets/kernel/qwidget_p.h
+index f79acb0912..9c05098eb1 100644
+--- a/qtbase/src/widgets/kernel/qwidget_p.h
++++ b/qtbase/src/widgets/kernel/qwidget_p.h
+@@ -708,14 +708,15 @@ public:
+ #endif
+ #if QT_CONFIG(whatsthis)
+     QString whatsThis;
+ #endif
+ #ifndef QT_NO_ACCESSIBILITY
+     QString accessibleName;
+     QString accessibleDescription;
++    QString automationId;
+ #endif
+ 
+     // Other variables.
+     uint directFontResolveMask;
+     uint inheritedFontResolveMask;
+     decltype(std::declval<QPalette>().resolveMask()) directPaletteResolveMask;
+     QPalette::ResolveMask inheritedPaletteResolveMask;

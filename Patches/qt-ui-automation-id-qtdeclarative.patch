@@ -1,0 +1,102 @@
+diff --git a/qtdeclarative/src/quick/accessible/qaccessiblequickitem.cpp b/qtdeclarative/src/quick/accessible/qaccessiblequickitem.cpp
+index 6f8df29538..133bc13317 100644
+--- a/qtdeclarative/src/quick/accessible/qaccessiblequickitem.cpp
++++ b/qtdeclarative/src/quick/accessible/qaccessiblequickitem.cpp
+@@ -600,14 +600,19 @@ QString QAccessibleQuickItem::text(QAccessible::Text textType) const
+             return accessibleName.toString();
+         break;}
+     case QAccessible::Description: {
+         QVariant accessibleDecription = QQuickAccessibleAttached::property(object(), "description");
+         if (!accessibleDecription.isNull())
+             return accessibleDecription.toString();
+         break;}
++    case QAccessible::AutomationId: {
++        QVariant automationId = QQuickAccessibleAttached::property(object(), "automationId");
++        if (!automationId.isNull())
++            return automationId.toString();
++        break;}
+ #ifdef Q_ACCESSIBLE_QUICK_ITEM_ENABLE_DEBUG_DESCRIPTION
+     case QAccessible::DebugDescription: {
+         QString debugString;
+         debugString = QString::fromLatin1(object()->metaObject()->className()) + QLatin1Char(' ');
+         debugString += isAccessible() ? QLatin1String("enabled") : QLatin1String("disabled");
+         return debugString;
+         break; }
+diff --git a/qtdeclarative/src/quick/items/qquickaccessibleattached_p.h b/qtdeclarative/src/quick/items/qquickaccessibleattached_p.h
+index 7b70bdb75c..b627c0c992 100644
+--- a/qtdeclarative/src/quick/items/qquickaccessibleattached_p.h
++++ b/qtdeclarative/src/quick/items/qquickaccessibleattached_p.h
+@@ -47,14 +47,15 @@ QT_BEGIN_NAMESPACE
+ 
+ class Q_QUICK_PRIVATE_EXPORT QQuickAccessibleAttached : public QObject
+ {
+     Q_OBJECT
+     Q_PROPERTY(QAccessible::Role role READ role WRITE setRole NOTIFY roleChanged FINAL)
+     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged FINAL)
+     Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged FINAL)
++    Q_PROPERTY(QString automationId READ automationId WRITE setAutomationId NOTIFY automationIdChanged FINAL)
+     Q_PROPERTY(bool ignored READ ignored WRITE setIgnored NOTIFY ignoredChanged FINAL)
+ 
+     QML_NAMED_ELEMENT(Accessible)
+     QML_ADDED_IN_VERSION(2, 0)
+     QML_UNCREATABLE("Accessible is only available via attached properties.")
+     QML_ATTACHED(QQuickAccessibleAttached)
+     QML_EXTENDED_NAMESPACE(QAccessible)
+@@ -106,14 +107,25 @@ public:
+             m_description = description;
+             Q_EMIT descriptionChanged();
+             QAccessibleEvent ev(parent(), QAccessible::DescriptionChanged);
+             QAccessible::updateAccessibility(&ev);
+         }
+     }
+ 
++    QString automationId() const { return m_automationId; }
++    void setAutomationId(const QString &automationId)
++    {
++        if (m_automationId != automationId) {
++            m_automationId = automationId;
++            Q_EMIT automationIdChanged();
++            QAccessibleEvent ev(parent(), QAccessible::AutomationIdChanged);
++            QAccessible::updateAccessibility(&ev);
++        }
++    }
++
+     // Factory function
+     static QQuickAccessibleAttached *qmlAttachedProperties(QObject *obj);
+ 
+     static QQuickAccessibleAttached *attachedProperties(const QObject *obj)
+     {
+         return qobject_cast<QQuickAccessibleAttached*>(qmlAttachedPropertiesObject<QQuickAccessibleAttached>(obj, false));
+     }
+@@ -168,14 +180,15 @@ public Q_SLOTS:
+     void setIgnored(bool ignored);
+ 
+ Q_SIGNALS:
+     void roleChanged();
+     void nameChanged();
+     void descriptionChanged();
+     void ignoredChanged();
++    void automationIdChanged();
+     void pressAction();
+     void toggleAction();
+     void increaseAction();
+     void decreaseAction();
+     void scrollUpAction();
+     void scrollDownAction();
+     void scrollLeftAction();
+@@ -188,14 +201,15 @@ private:
+ 
+     QAccessible::Role m_role;
+     QAccessible::State m_state;
+     QAccessible::State m_stateExplicitlySet;
+     QString m_name;
+     bool m_nameExplicitlySet = false;
+     QString m_description;
++    QString m_automationId;
+ 
+     static QMetaMethod sigPress;
+     static QMetaMethod sigToggle;
+     static QMetaMethod sigIncrease;
+     static QMetaMethod sigDecrease;
+     static QMetaMethod sigScrollUp;
+     static QMetaMethod sigScrollDown;
