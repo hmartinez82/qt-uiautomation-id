@@ -87,7 +87,8 @@ jobs:
                   "-qtsvg,"
                   "-qtimageformats,"
                   "-qtmultimedia,"
-                  "-qttranslations"
+                  "-qttranslations,"
+                  "-qtgraphs"
               ) -join ''
           ) -join ''
 
