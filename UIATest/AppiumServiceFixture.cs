@@ -1,28 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
 using OpenQA.Selenium.Appium.Service;
-using UIATest;
+using Xunit;
 
-namespace UIATest
+namespace UIATest;
+public class AppiumServiceFixture : IDisposable
 {
-    public class AppiumServiceFixture : IDisposable
+    private readonly AppiumLocalService _appiumLocalService;
+    public AppiumServiceFixture()
     {
-        private readonly AppiumLocalService _appiumLocalService;
-        public AppiumServiceFixture()
-        {
-            var builder = new AppiumServiceBuilder();
-            builder.WithEnvironment(new Dictionary<string, string>
-            {
-                { "PATH", Environment.GetEnvironmentVariable("PATH") + @";X:\Github\qt-uiautomation-id\Build\bin" }
-            });
-            _appiumLocalService = builder.Build();
-            _appiumLocalService.Start();
-        }
+        var testPath = Environment.GetEnvironmentVariable("UIATEST_PATH");
+        Assert.False(string.IsNullOrEmpty(testPath), "UIATEST_PATH is not set.");
 
-        public void Dispose()
-        {
-            _appiumLocalService?.Dispose();
-        } 
-
+        var builder = new AppiumServiceBuilder();
+        _appiumLocalService = builder.Build();
+        _appiumLocalService.Start();
     }
+
+    public void Dispose()
+    {
+        _appiumLocalService?.Dispose();
+    } 
+
 }

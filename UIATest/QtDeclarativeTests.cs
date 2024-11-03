@@ -1,11 +1,7 @@
 using System;
 using Xunit;
-using OpenQA.Selenium.Appium.Enums;
 using OpenQA.Selenium.Appium;
 using OpenQA.Selenium.Appium.Windows;
-using OpenQA.Selenium.Remote;
-using System.Threading;
-using OpenQA.Selenium;
 
 namespace UIATest;
 
@@ -17,7 +13,7 @@ public class QtDeclarativeTestsFixture : IDisposable
 
     public QtDeclarativeTestsFixture()
     {
-        var serverUri = new Uri(Environment.GetEnvironmentVariable("APPIUM_HOST"));
+        var serverUri = new Uri(Environment.GetEnvironmentVariable("APPIUM_HOST") ?? "http://127.0.0.1:4723");
         var driverOptions = new AppiumOptions()
         {
             PlatformName = "windows",

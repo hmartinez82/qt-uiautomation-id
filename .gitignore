@@ -400,5 +400,5 @@ FodyWeavers.xsd
 Sources/
 Build/
 Demo/b*
-
+.runsettings
 qt-everywhere*
