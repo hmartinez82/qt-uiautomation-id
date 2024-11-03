@@ -7,7 +7,7 @@ on:
         description: 'Qt version to download sources for, apply patches and build'
         required: true
       patch-version:
-        description: 'Version of the patch to apply. Defaults to the same version as "qt-version" if not provided'
+        description: 'Version of the patch to apply. Defaults to the one in the respository if not provided'
         required: false
 
 run-name: Qt ${{ inputs.qt-version }}
@@ -203,7 +203,7 @@ jobs:
     runs-on: [windows-2022]
     needs: [build-qt,build-test]
     permissions:
-      contents: read
+      contents: write
       issues: read
       checks: write
       pull-requests: write
@@ -242,3 +242,9 @@ jobs:
         if: always()
         with:
           files: UIATest\TestResults\*.trx
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Patches/*
+          tag_name: v${{ inputs.qt-version }}
