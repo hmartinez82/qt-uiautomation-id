@@ -116,7 +116,7 @@ jobs:
           set "PREFIX=%CD%\Build"
           echo Install Prefix: %PREFIX%
 
-          set "ARGUMENTS=-release -shared -nomake examples -nomake tests -schannel -direct2d -skip qtcharts,qtcoap,qtconnectivity,qtdatavis3d,qtlottie,qtmqtt,qtnetworkauth,qtopcua,qtpositioning,qtquick3d,qtquicktimeline,qtremoteobjects,qtscxml,qtsensors,qtcoap,qtconnectivity,qtdatavis3d,qtlottie,qtmqtt,qtnetworkauth,qtopcua,qtpositioning,qtquick3d,qtquicktimeline,qtremoteobjects,qtscxml,qtsensors,qtserialbus,qtserialport,qtvirtualkeyboard,qtwayland,qtwebchannel,qtwebengine,qtwebsockets,qtwebview,qtsvg,qtimageformats,qtmultimedia,qttools,qttranslations -prefix %PREFIX%"
+          set "ARGUMENTS=-release -shared -nomake examples -nomake tests -no-feature-designer -no-feature-assistant -no-feature-linguist -schannel -direct2d -skip qtcharts,qtcoap,qtconnectivity,qtdatavis3d,qtlottie,qtmqtt,qtnetworkauth,qtopcua,qtpositioning,qtquick3d,qtquicktimeline,qtremoteobjects,qtscxml,qtsensors,qtcoap,qtconnectivity,qtdatavis3d,qtlottie,qtmqtt,qtnetworkauth,qtopcua,qtpositioning,qtquick3d,qtquicktimeline,qtremoteobjects,qtscxml,qtsensors,qtserialbus,qtserialport,qtvirtualkeyboard,qtwayland,qtwebchannel,qtwebengine,qtwebsockets,qtwebview,qtsvg,qtimageformats,qtmultimedia,qttranslations -prefix %PREFIX%"
 
           cd Sources
           echo Running: call configure %ARGUMENTS%
