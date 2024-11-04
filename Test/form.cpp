@@ -7,11 +7,11 @@ Form::Form(QWidget *parent)
 {
     ui->setupUi(this);
 
-    setAutomationId("QtWidgetWindow");
+    setAccessibleId("QtWidgetWindow");
     ui->progressBar->setAccessibleName("ProgressBar");
     ui->pushButton->setAccessibleName("Button");
-    ui->progressBar->setAutomationId("ProgressBar");
-    ui->pushButton->setAutomationId("Button");
+    ui->progressBar->setAccessibleId("ProgressBar");
+    ui->pushButton->setAccessibleId("Button");
 }
 
 Form::~Form()
@@ -26,5 +26,5 @@ void Form::on_pushButton_clicked()
         newValue = 0;
     ui->progressBar->setValue(newValue);
 
-    ui->progressBar->setAutomationId("New ProgressBar");
+    ui->progressBar->setAccessibleId("New ProgressBar");
 }
