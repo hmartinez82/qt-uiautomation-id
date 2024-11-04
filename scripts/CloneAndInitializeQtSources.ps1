@@ -64,10 +64,11 @@ $repo_init_arguments = @(
         "-qtsvg,"
         "-qtimageformats,"
         "-qtmultimedia,"
-        "-qttranslations"
+        "-qttranslations,"
+        "-qtgraphs"
     ) -join ''
 ) -join ''
-Write-Host "perl init-repository $repo_init_arguments"
+Write-Host "perl init-repository.pl $repo_init_arguments"
 
 Set-Location .\Sources
 perl init-repository $repo_init_arguments

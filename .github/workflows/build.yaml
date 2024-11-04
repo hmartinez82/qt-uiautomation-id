@@ -92,7 +92,7 @@ jobs:
               ) -join ''
           ) -join ''
 
-          perl init-repository $repo_init_arguments
+          perl init-repository.pl $repo_init_arguments
 
       - name: Apply patches
         shell: pwsh
