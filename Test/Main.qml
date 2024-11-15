@@ -1,4 +1,4 @@
-import QtQuick
+import QtQuick 6.8
 import QtQuick.Controls
 import QtQuick.Layouts
 
@@ -14,27 +14,24 @@ Window {
 
         Button {
             text: "OK"
-            objectName: "buttonOK"
 
             Accessible.role: Accessible.Button
             Accessible.name: "OK"
-            Accessible.automationId: "Button"
 
             Layout.preferredWidth: 100
 
 			onClicked: {
-				switch1.Accessible.automationId = "New Switch"
+				switch1.Accessible.id = "New Switch" //Works as expected
 			}
         }
 
         Switch {
 			id: switch1
             text: "Bluetooth"
-            objectName: "buttonBluetooth"
 
             Accessible.role: Accessible.CheckBox
             Accessible.name: "Bluetooth"
-            Accessible.automationId: "Switch"
+            Accessible.id: "Switch" // Uncomment to see issue
         }
     }
 }

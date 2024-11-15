@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     if (testType == "quick")
     {
         QQmlApplicationEngine engine;
-        const QUrl url(u"qrc:/Test/Main.qml"_qs);
+        const QUrl url(QStringLiteral(u"qrc:/Test/Main2.qml"));
         QObject::connect(
             &engine,
             &QQmlApplicationEngine::objectCreated,
